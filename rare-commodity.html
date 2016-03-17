@@ -1,0 +1,343 @@
+<html>
+<head>
+	<title>Elite Dangerous: Rare Commodities Tool</title>
+
+	<script src="jquery-2.2.0.js"></script>
+
+	<style>
+	        h2 {
+	        	font-style: italic;
+	        }
+	
+	        .content {
+	        	margin-top: 50px;
+	        }
+	
+		.input {
+			margin-bottom: 30px;
+		}
+
+		.input .limits {
+			margin-top: 15px;
+		}
+
+		.input-row {
+			margin-bottom: 5px;
+		}
+
+		.limits .input-row {
+			margin-left: 30px;
+		}
+
+		.limits .input-row .label {
+			font-weight: normal;
+		}
+
+		.input input {
+			margin-right: 10px;
+		}
+
+		.input .example {
+			font-style: italic;
+		}
+
+		.commands {
+			margin-bottom: 30px;
+		}
+
+		.commands input {
+			margin-bottom: 10px;
+		}
+
+		#output {
+			margin-bottom: 30px;
+		}
+
+		.label {
+			font-weight: bold;
+			margin-right: 10px;
+		}
+
+		table, th, td {
+		    border: 1px solid black;
+		    padding: 5px;
+		}
+
+		tr.station-row-too-far {
+			color: #AAAAAA;
+		}
+	</style>
+</head>
+
+<body>
+	<div><h1>Elite Dangerous:</h1></div>
+
+	<div><h2>Rare Commodity Tool</h2></div>
+	
+	<div class="content">
+		<div class="input">
+			<div class="input-row"><span class="label">Your Location (X:Y:Z):</span><input id="location" type="text"></input><span class="example">Ex: "-12:20:10"</span></div>
+
+			<div class="limits">
+				<div class="label">Limits:</div>
+
+				<div class="input-row"><span class="label">Maximum Station Distance (LS):</span><input id="maxDistanceStation" type="text" value="10000"></input><span class="example">Ex: "10000" (measured in LS). Leave blank to set no maximum.</span></div>
+				<div class="input-row"><span class="label">Minimum System Distance: </span> <input id="minDistanceSystem" /><span class="example">Ex: "140" (measured in LY). Leave blank to set no minimum.</span></div>
+			</div>
+		</div>
+
+		<div class="commands">
+			<div><input id="command-nearest-rc-station" type="button" value="Nearest RC Station" /></div>
+			<div><input id="command-nearest-profitable-rc-station" type="button" value="Nearest Profitable RC Station" /></div>
+			<div><input id="command-list-stations-by-distance" type="button" value="List RC Stations By Distance" /></div>
+		</div>
+
+		<div id="output">
+
+		</div>
+	</div>
+
+
+	<script type="text/javascript">
+		$('#command-nearest-rc-station').click(function(e) {
+			nearestStation();
+		});
+
+		$('#command-nearest-profitable-rc-station').click(function(e) {
+			$('#minDistanceSystem').val(140);
+			nearestStation();
+		});
+
+		$('#command-list-stations-by-distance').click(function(e) {
+			listStationsByDistance();
+		});
+
+		function nearestStation() {
+			if ($('#location').val()) {
+				var maxDistanceStation = $('#maxDistanceStation').val();
+
+				var minDistanceSystem = $('#minDistanceSystem').val();
+
+				var location = parseLocation($('#location').val());
+
+				var minDistanceStation = null;
+
+				$.each(data, function(i, station) {
+					var stationLocation = parseLocation(station.systemLocation);
+
+					var distance = stationDistance(location, stationLocation);
+
+					if (minDistanceStation == null || distance <= minDistanceStation.distance) {
+						if (!minDistanceSystem || distance >= minDistanceSystem) {
+							if (!maxDistanceStation || parseInt(station.stationLocation) <= parseInt(maxDistanceStation)) {
+								minDistanceStation = $.extend(true, {"distance": distance}, station) ;
+							}
+						}
+					}
+				});
+
+				outputStations([minDistanceStation], maxDistanceStation);
+			} else {
+				alert('Please enter a location!');
+			}
+		}
+
+		function listStationsByDistance() {
+			var location = parseLocation($('#location').val());
+
+			var stationList = [];
+
+			$.each(data, function(i, station) {
+				stationList.push($.extend(true, {"distance": stationDistance(location, parseLocation(station.systemLocation))}, station));
+			});
+
+			stationList.sort(function(a,b) {
+				return a.distance - b.distance;
+			});
+
+			outputStations(stationList, $('#maxDistanceStation').val());
+		}
+
+		function outputStations(stations, maxDistanceStation) {
+			var outputTable = $('<table>');
+			outputTable.append($('<tr>').append(
+				$('<th>').append('System')
+			).append(
+				$('<th>').append('Station')
+			).append(
+				$('<th>').append('Station Distance')
+			).append(
+				$('<th>').append('Location')
+			).append(
+				$('<th>').append('Commodity')
+			).append(
+				$('<th>').append('Commodity Limit')
+			).append(
+				$('<th>').append('Distance From Location')
+			));
+			$("#output").html('');
+			$("#output").append(outputTable);
+			$.each(stations, function(i, station) {
+				var rowClass = 'station-row';
+				if (maxDistanceStation && parseInt(station.stationLocation) > parseInt(maxDistanceStation)) {
+					rowClass += ' station-row-too-Far';
+				}
+
+				outputTable.append($('<tr>', { 'class':rowClass }).append(
+					$('<td>').append(station.system)
+				).append(
+					$('<td>').append(station.station)
+				).append(
+					$('<td>').append(station.stationLocation)
+				).append(
+					$('<td>').append(station.systemLocation)
+				).append(
+					$('<td>').append(station.commodityName)
+				).append(
+					$('<td>').append(station.commodityLimit)
+				).append(
+					$('<td>').append(station.distance)
+				));
+			});
+		}
+
+		function stationDistance(stationA, stationB) {
+			return Math.sqrt(Math.pow(stationA[0] - stationB[0], 2) + Math.pow(stationA[1] - stationB[1], 2) + Math.pow(stationA[2] - stationB[2], 2));
+		}
+
+		function parseLocation(location) {
+			return location.split(/[\s,;:]+/);
+		}
+
+		var data = [
+			{"system":"17 Lyrae","station":"Langford Enterprise","commodityName":"Ultra-Compact Processor","commodityLimit":"1t","systemLocation":"-120:25:58","stationLocation":2200},
+			{"system":"36 Ophiuchi","station":"Katzenstein Dock","commodityName":"Ophiuch Exino Artefacts","commodityLimit":"7t","systemLocation":"0:2:20","stationLocation":4500000},
+			{"system":"39 Tauri","station":"Porta","commodityName":"Tauri Chimes","commodityLimit":"17t","systemLocation":"0:-21:-50","stationLocation":990},
+			{"system":"47 Ceti","station":"Glushko Station","commodityName":"Aepyornis Egg","commodityLimit":"5t","systemLocation":"-10:-117:30","stationLocation":600000},
+			{"system":"47 Ceti","station":"Kaufmanis Hub","commodityName":"Ceti Rabbits","commodityLimit":"12t","systemLocation":"-10:-117:30","stationLocation":600000},
+			{"system":"Aegaeon","station":"Schweikart Station","commodityName":"Chateau De Aegaeon","commodityLimit":"14t","systemLocation":"50:23:-50","stationLocation":11600},
+			{"system":"Aerial","station":"Andrade Legacy","commodityName":"Eden Apples Of Aerial","commodityLimit":"7t","systemLocation":"110:-103:10","stationLocation":180},
+			{"system":"Alacarakmo","station":"Weyl Gateway","commodityName":"Alacarakmo Skin Art","commodityLimit":"14t","systemLocation":"-30:169:-40","stationLocation":16},
+			{"system":"Aganippe","station":"Julian Market","commodityName":"Aganippe Rush","commodityLimit":"4t","systemLocation":"-10:43:20","stationLocation":117},
+			{"system":"Alpha Centauri","station":"Hutton Orbital","commodityName":"Centauri Mega Gin","commodityLimit":"7t","systemLocation":"10:-1:10","stationLocation":6800000},
+			{"system":"Alpha Centauri","station":"Hutton Orbital","commodityName":"The Hutton Mug","commodityLimit":"30t","systemLocation":"10:-1:10","stationLocation":6800000},
+			{"system":"Altair","station":"Solo Orbiter","commodityName":"Altairian Skin","commodityLimit":"14t","systemLocation":"-10:-3:20","stationLocation":667},
+			{"system":"Alya","station":"Malaspina Gateway","commodityName":"Alya Body Soap","commodityLimit":"16t","systemLocation":"-70:-58:40","stationLocation":540000},
+			{"system":"Anduliga","station":"Celsius Estate","commodityName":"Anduliga Fire Works","commodityLimit":"16t","systemLocation":"130:2:70","stationLocation":626220},
+			{"system":"Any Na","station":"Libby Orbital","commodityName":"Any Na Coffee","commodityLimit":"11t","systemLocation":"130:-2:20","stationLocation":581},
+			{"system":"Arouca","station":"Shipton Orbital","commodityName":"Arouca Conventual Sweets","commodityLimit":"12t","systemLocation":"110:-7:0","stationLocation":410},
+			{"system":"AZ Cancri","station":"Fisher Station","commodityName":"Az Cancri Formula 42","commodityLimit":"8t","systemLocation":"20:26:-30","stationLocation":16},
+			{"system":"Baltah'Sine","station":"Baltha'sine Station","commodityName":"Baltah'sine Vacuum Krill","commodityLimit":"18t","systemLocation":"90:-57:50","stationLocation":356},
+			{"system":"Banki","station":"Antonio de Andrade Vista","commodityName":"Banki Amphbious Leather","commodityLimit":"18t","systemLocation":"50:15:-90","stationLocation":532844},
+			{"system":"Bast","station":"Hart Station","commodityName":"Bast Snake Gin","commodityLimit":"10t","systemLocation":"-30:16:-30","stationLocation":202},
+			{"system":"Belalans","station":"Boscovich Ring","commodityName":"Belalans Ray Leather","commodityLimit":"11t","systemLocation":"90:-95:-50","stationLocation":79},
+			{"system":"Bento","station":"Snow Moon","commodityName":"Crystalline Spheres","commodityLimit":"12t","systemLocation":"20:-32:10","stationLocation":262},
+			{"system":"Borasetani","station":"Katzenstien Terminal","commodityName":"Borasetani Pathogenetics","commodityLimit":"","systemLocation":"10:117:-10","stationLocation":229},
+			{"system":"CD-75 661","station":"Kirk Dock","commodityName":"CD-75 Kitten Brand Coffee","commodityLimit":"12t","systemLocation":"70:-22:60","stationLocation":339},
+			{"system":"Cherbones","station":"Chalker Landing","commodityName":"Cherbones Blood Crystals","commodityLimit":"3t","systemLocation":"10:84:-10","stationLocation":576740},
+			{"system":"Chi Eridani","station":"Steve Masters Station","commodityName":"Chi Eridani Marine Paste","commodityLimit":"18t","systemLocation":"30:-52:10","stationLocation":2184},
+			{"system":"Coquim","station":"Hirayama Installation","commodityName":"Coquim Spongiform Victuals","commodityLimit":"20t","systemLocation":"30:-83:40","stationLocation":606},
+			{"system":"Damna","station":"Nemere Market","commodityName":"Damna Carapaces","commodityLimit":"","systemLocation":"-40:4:-120","stationLocation":2582},
+			{"system":"Dea Motrona","station":"Dea Motrona","commodityName":"Motrona Experience Jelly","commodityLimit":"11t","systemLocation":"-10:62:30","stationLocation":1700000},
+			{"system":"Delta Pavonis","station":"Hooper Relay","commodityName":"Pavonis Ear Grubs","commodityLimit":"24t","systemLocation":"10:-11:20","stationLocation":195},
+			{"system":"Delta Phoenicis","station":"Trading Post","commodityName":"Delta Phoenicis Palms","commodityLimit":"17t","systemLocation":"60:-131:20","stationLocation":3760},
+			{"system":"Deuringas","station":"Shukor Hub","commodityName":"Deuringas Truffles","commodityLimit":"7t","systemLocation":"140:3:-30","stationLocation":798},
+			{"system":"Diso","station":"Shifnalport","commodityName":"Diso Ma Corn","commodityLimit":"15t","systemLocation":"80:48:80","stationLocation":284},
+			{"system":"Eleu","station":"Finney Dock","commodityName":"Eleu Thermals","commodityLimit":"13t","systemLocation":"-20:32:110","stationLocation":333},
+			{"system":"Epsilon Indi","station":"Mansfield Orbiter","commodityName":"Indi Bourbon","commodityLimit":"*","systemLocation":"10:-9:10","stationLocation":143},
+			{"system":"Eranin","station":"Azeban City","commodityName":"Eranin Pearl Whisky","commodityLimit":"8t","systemLocation":"-20:36:0","stationLocation":290},
+			{"system":"Eshu","station":"Shajn Terminal","commodityName":"Eshu Umbrellas","commodityLimit":"9t","systemLocation":"130:-248:-10","stationLocation":1742},
+			{"system":"Esuseku","station":"Savinykh Orbital","commodityName":"Esuseku Caviar","commodityLimit":"10t","systemLocation":"-100:29:-20","stationLocation":275},
+			{"system":"Ethgreze","station":"Bloch Station","commodityName":"Ethgreze Tea Buds","commodityLimit":"7t","systemLocation":"-30:72:-20","stationLocation":348},
+			{"system":"Fujin","station":"Futen Spaceport","commodityName":"Fujin Tea","commodityLimit":"10t","systemLocation":"0:-31:-50","stationLocation":559},
+			{"system":"Geawen","station":"Obruchev Legacy","commodityName":"Geawen Dance Dust","commodityLimit":"23t","systemLocation":"30:23:180","stationLocation":426261},
+			{"system":"George Pantazis","station":"Zamka Platform","commodityName":"Pantaa Prayer Sticks","commodityLimit":"15t","systemLocation":"-10:-16:-10","stationLocation":45},
+			{"system":"Geras","station":"Yurchikhin Port","commodityName":"Gerasian Gueuze Beer","commodityLimit":"24t","systemLocation":"0:-13:-50","stationLocation":1000000},
+			{"system":"Gilya","station":"Bell Orbital","commodityName":"Gilya Signature Weapons","commodityLimit":"","systemLocation":"-70:51:30","stationLocation":462},
+			{"system":"Goman","station":"Gustav Sporer Port","commodityName":"Goman Yaupon Coffee","commodityLimit":"16t","systemLocation":"160:-174:30","stationLocation":271},
+			{"system":"Haiden","station":"Searfoss Enterprise","commodityName":"Haidne Black Brew","commodityLimit":"14t","systemLocation":"-140:-14:-40","stationLocation":561080},
+			{"system":"Havasupai","station":"Lovelace Port","commodityName":"Havasupai Dream Catcher","commodityLimit":"","systemLocation":"-80:-77:-30","stationLocation":601314},
+			{"system":"Hecate","station":"RJH1972","commodityName":"Live Hecate Sea Worms","commodityLimit":"13t","systemLocation":"-50:-26:-40","stationLocation":525},
+			{"system":"Heike","station":"Brunel City","commodityName":"Ceremonial Heike Tea","commodityLimit":"8t","systemLocation":"-70:71:70","stationLocation":410},
+			{"system":"Helvetitj","station":"Friend Orbital","commodityName":"Helvetitj Pearls","commodityLimit":"6t","systemLocation":"-20:80:70","stationLocation":445},
+			{"system":"HIP 10175","station":"Stefanyshyn-Piper Station","commodityName":"HIP 10175 Bush Meat","commodityLimit":"13t","systemLocation":"-40:-94:-80","stationLocation":4850},
+			{"system":"Gliese 1269","station":"Jaques Station","commodityName":"Jaques Queintian Still","commodityLimit":"1t","systemLocation":"-70:-133:70","stationLocation":660},
+			{"system":"HIP 112974","station":"La Cosa City","commodityName":"Onionhead Beta Strain","commodityLimit":"10t","systemLocation":"-59:-108:34","stationLocation":12645},
+			{"system":"HIP 41181","station":"Andersson Station","commodityName":"HIP Proto-Squid","commodityLimit":"5t","systemLocation":"0:74:-100","stationLocation":536714},
+			{"system":"HIP 59533","station":"Burnham Beacon","commodityName":"Burnham Bile Distillate","commodityLimit":"","systemLocation":"130:-10:70","stationLocation":529600},
+			{"system":"HIP 80364","station":"Stasheff Colony","commodityName":"HIP Organophosphates","commodityLimit":"17t","systemLocation":"-100:93:10","stationLocation":2632},
+			{"system":"Holva","station":"Kreutz Orbital","commodityName":"Holva Duelling Blades","commodityLimit":"","systemLocation":"60:-171:-40","stationLocation":22000},
+			{"system":"HR 7221","station":"Veron City","commodityName":"HR 7221 Wheat","commodityLimit":"16t","systemLocation":"60:-56:100","stationLocation":1886},
+			{"system":"Irukama","station":"Blaauw City","commodityName":"Giant Irukama Snails","commodityLimit":"16t","systemLocation":"150:-97:70","stationLocation":325},
+			{"system":"Jaradharre","station":"Gohar Station","commodityName":"Jaradharre Puzzle Box","commodityLimit":"4t","systemLocation":"40:21:60","stationLocation":526178},
+			{"system":"Jaroua","station":"Mccool City","commodityName":"Jaroua Rice","commodityLimit":"18t","systemLocation":"160:-111:30","stationLocation":142},
+			{"system":"Jotun","station":"Icelock","commodityName":"Jotun Mookah","commodityLimit":"10t","systemLocation":"-10:-80:-90","stationLocation":80},
+			{"system":"Kachirigin","station":"Nowak Orbital","commodityName":"Kachirigin Filter Leeches","commodityLimit":"10t","systemLocation":"-100:-74:30","stationLocation":340},
+			{"system":"Kamitra","station":"Hammel Terminal","commodityName":"Kamitra Cigars","commodityLimit":"6t","systemLocation":"10:-184:70","stationLocation":83},
+			{"system":"Kamorin","station":"Godwin Vision","commodityName":"Kamorin Historic Weapons","commodityLimit":"10t","systemLocation":"-120:-82:50","stationLocation":445},
+			{"system":"Kappa Fornacis","station":"Harvestport","commodityName":"Onion Head","commodityLimit":"8t","systemLocation":"20:-67:-20","stationLocation":918},
+			{"system":"Karetii","station":"Sinclair Platform","commodityName":"Karetii Couture","commodityLimit":"5t","systemLocation":"-120:44:80","stationLocation":990},
+			{"system":"Karsuki Ti","station":"West Market","commodityName":"Karsuki Locusts","commodityLimit":"18t","systemLocation":"140:-164:80","stationLocation":28},
+			{"system":"Kinago","station":"Fozard Ring","commodityName":"Kinago Violins","commodityLimit":"3t","systemLocation":"-60:-8:160","stationLocation":1723},
+			{"system":"Kongga","station":"Laplace Ring","commodityName":"Kongga Ale","commodityLimit":"16t","systemLocation":"-100:82:-30","stationLocation":250},
+			{"system":"Korro Kung","station":"Lonchakov Orbital","commodityName":"Koro Kung Pellets","commodityLimit":"20t","systemLocation":"90:52:40","stationLocation":622040},
+			{"system":"Lave","station":"Lave Station","commodityName":"Lavian Brandy","commodityLimit":"7t","systemLocation":"80:48:80","stationLocation":284},
+			{"system":"Leesti","station":"George Lucas","commodityName":"Leestian Evil Juice","commodityLimit":"14t","systemLocation":"80:48:70","stationLocation":261},
+			{"system":"Leesti","station":"George Lucas","commodityName":"Azure Milk","commodityLimit":"7t","systemLocation":"80:48:70","stationLocation":261},
+			{"system":"LFT 1421","station":"Ehrlich Orbital","commodityName":"Void Extract Coffee","commodityLimit":"","systemLocation":"-40:18:20","stationLocation":773000},
+			{"system":"LDS 883","station":"Smith Reserve","commodityName":"Chameleon Cloth","commodityLimit":"7t","systemLocation":"-20:-36:-60","stationLocation":54480},
+			{"system":"LP 375-25","station":"King Gateway","commodityName":"Honesty Pills","commodityLimit":"13t","systemLocation":"10:59:-10","stationLocation":514700},
+			{"system":"LTT 8517","station":"Euclid Terminal","commodityName":"Non Euclidian Exotanks","commodityLimit":"16t","systemLocation":"4:-56:53","stationLocation":711770},
+			{"system":"LTT 9360","station":"Smeaton Orbital","commodityName":"LTT Hypersweet","commodityLimit":"19t","systemLocation":"-17:-63:21","stationLocation":1900000},
+			{"system":"Mechucos","station":"Brandenstein Port","commodityName":"Mechucos High Tea","commodityLimit":"12t","systemLocation":"70:39:-70","stationLocation":534137},
+			{"system":"Medb","station":"Vela Dock","commodityName":"Medb Starlube","commodityLimit":"18t","systemLocation":"20:4:40","stationLocation":1700000},
+			{"system":"Mokojing","station":"Noli Terminal","commodityName":"Mokojing Beast Feast","commodityLimit":"7t","systemLocation":"80:58:0","stationLocation":539400},
+			{"system":"Momus Reach","station":"Tartarus Point","commodityName":"Momus Bog Spaniel","commodityLimit":"7t","systemLocation":"-30:-45:-70","stationLocation":420},
+			{"system":"Mukusubii","station":"Ledyard Dock","commodityName":"Mukusubii Chitin-Os","commodityLimit":"15t","systemLocation":"-140:-65:50","stationLocation":505430},
+			{"system":"Mulachi","station":"Clark Terminal","commodityName":"Mulachi Giant Fungus","commodityLimit":"22t","systemLocation":"10:-6:40","stationLocation":690000},
+			{"system":"Neritus","station":"Toll Ring","commodityName":"Neritus Berries","commodityLimit":"13t","systemLocation":"80:2:-30","stationLocation":524},
+			{"system":"Ngadandari","station":"Consolmagno Horizons","commodityName":"Ngadandari Fire Opals","commodityLimit":"6t","systemLocation":"70:-75:110","stationLocation":502357},
+			{"system":"Ngurii","station":"Cheranovsky City","commodityName":"Soontill Relics","commodityLimit":"5t","systemLocation":"170:-43:90","stationLocation":1265},
+			{"system":"Nguna","station":"Biggle Hub","commodityName":"Nguna Modern Antiques","commodityLimit":"18t","systemLocation":"-120:-103:-20","stationLocation":1870},
+			{"system":"Njambalba","station":"Frost Dock","commodityName":"Personal Gifts","commodityLimit":"20t","systemLocation":"-4:-154:26","stationLocation":32355},
+			{"system":"Njangari","station":"Lee Hub","commodityName":"Njangari Saddles","commodityLimit":"13t","systemLocation":"10:-206:70","stationLocation":21483},
+			{"system":"Noti","station":"Webber Gateway","commodityName":"Master Chefs","commodityLimit":"13t","systemLocation":"72:43:-31","stationLocation":73},
+			{"system":"Ochoeng","station":"Roddenberry Gateway","commodityName":"Ochoeng Chillies","commodityLimit":"14t","systemLocation":"-130:-3:0","stationLocation":484},
+			{"system":"Orrere","station":"Sharon Lee Free Market","commodityName":"Orrerian Vicious Brew","commodityLimit":"16t","systemLocation":"70:48:80","stationLocation":961},
+			{"system":"Phiagre","station":"Greeboski's Outpost","commodityName":"Giant Verrix","commodityLimit":"6t","systemLocation":"50:-83:60","stationLocation":85},
+			{"system":"Quechua","station":"Crown Ring","commodityName":"Albino Quechua Mammoth Meat","commodityLimit":"10t","systemLocation":"60:-113:-40","stationLocation":120},
+			{"system":"Rajukru","station":"Snyder Terminal","commodityName":"Rajukru Multi-Stoves","commodityLimit":"17t","systemLocation":"-90:143:10","stationLocation":117},
+			{"system":"Rapa Bao","station":"Flagg Gateway","commodityName":"Rapa Bao Snake Skins","commodityLimit":"11t","systemLocation":"100:-168:-20","stationLocation":2338},
+			{"system":"Rusani","station":"Fernandes Market","commodityName":"Rusani Old Smokey","commodityLimit":"10t","systemLocation":"-60:57:-80","stationLocation":73},
+			{"system":"Sanuma","station":"Dunyach Gateway","commodityName":"Sanuma Decorative Meat","commodityLimit":"24t","systemLocation":"160:61:80","stationLocation":6000},
+			{"system":"Shinrarta Dezhra","station":"Jameson Memorial","commodityName":"Waters of Shintara","commodityLimit":"6t","systemLocation":"60:17:30","stationLocation":346},
+			{"system":"Sothis","station":"Newholm Station","commodityName":"Sothis Crystalline Gold","commodityLimit":"20t","systemLocation":"-350:10:-340","stationLocation":1848},
+			{"system":"Tarach Tor","station":"Tranquillity","commodityName":"Tarach Spice","commodityLimit":"8t","systemLocation":"-10:-81:-20","stationLocation":359},
+			{"system":"Tanmark","station":"Cassie-L-Peia","commodityName":"Lucan Onion Head","commodityLimit":"8t","systemLocation":"10:-78:-30","stationLocation":414},
+			{"system":"Tanmark","station":"Cassie-L-Peia","commodityName":"Tanmark Tranquil Tea","commodityLimit":"9t","systemLocation":"10:-78:-30","stationLocation":414},
+			{"system":"Terra Mater","station":"Gr8minds","commodityName":"Terra Mater Blood Bores","commodityLimit":"5t","systemLocation":"-50:-19:-45","stationLocation":504},
+			{"system":"Thrutis","station":"Kingsbury Dock","commodityName":"Thrutis Cream","commodityLimit":"11t","systemLocation":"-90:8:-70","stationLocation":288},
+			{"system":"Tiolce","station":"Gordon Terminal","commodityName":"Tiolce Waste2Paste Units","commodityLimit":"13t","systemLocation":"20:-35:30","stationLocation":158},
+			{"system":"Toxandji","station":"Tsunenaga Orbital","commodityName":"Toxandji Virocide","commodityLimit":"14t","systemLocation":"160:-13:70","stationLocation":7622},
+			{"system":"Uszaa","station":"Guest Installation","commodityName":"Uszaian Tree Grub","commodityLimit":"14t","systemLocation":"70:48:80","stationLocation":4350},
+			{"system":"Utgaroar","station":"Fort Klarix","commodityName":"Utgaroar Millennial Eggs","commodityLimit":"15t","systemLocation":"0:-103:0","stationLocation":171},
+			{"system":"Uzumoku","station":"Sverdrup Ring","commodityName":"Uzumoku Low-G Wings","commodityLimit":"8t","systemLocation":"-90:9:-70","stationLocation":505300},
+			{"system":"V1090 Herculis","station":"Kaku Plant","commodityName":"V Herculis Body Rub","commodityLimit":"10t","systemLocation":"-40:36:20","stationLocation":1300000},
+			{"system":"Vanayequi","station":"Clauss Hub","commodityName":"Vanayequi Ceratomorpha Fur","commodityLimit":"10t","systemLocation":"-80:-13:100","stationLocation":81},
+			{"system":"Vega","station":"Taylor City","commodityName":"Vega Slimweed","commodityLimit":"28t","systemLocation":"-20:8:10","stationLocation":1100},
+			{"system":"Vidavanta","station":"Lee Mines","commodityName":"Vidavantian Lace","commodityLimit":"","systemLocation":"-50:90:70","stationLocation":556882},
+			{"system":"Volkhab","station":"Vernadsky Dock","commodityName":"Volkhab Bee Drones","commodityLimit":"6t","systemLocation":"40:100:-130","stationLocation":408},
+			{"system":"Wolf 1301","station":"Saunders's Dive","commodityName":"Wolf Fesh","commodityLimit":"13t","systemLocation":"-10:-35:-70","stationLocation":415},
+			{"system":"Wheemete","station":"Eisinga Enterprise","commodityName":"Wheemete Wheat Cakes","commodityLimit":"","systemLocation":"150:-141:140","stationLocation":551628},
+			{"system":"Witchhaul","station":"Hornby Terminal","commodityName":"Witchhaul Kobe Beef","commodityLimit":"9t","systemLocation":"-10:-53:-60","stationLocation":219},
+			{"system":"Wulpa","station":"Williams Gateway","commodityName":"Wulpa Hyperbore Systems","commodityLimit":"10t","systemLocation":"-120:-84:-80","stationLocation":28},
+			{"system":"Wuthielo Ku","station":"Tarter Dock","commodityName":"Wuthielo Ku Froth","commodityLimit":"17t","systemLocation":"70:-191:20","stationLocation":174},
+			{"system":"Xelabara","station":"Navigator Market","commodityName":"Onionhead Alpha Strain","commodityLimit":"6-10t","systemLocation":"-93:66:-45","stationLocation":303},
+			{"system":"Xihe","station":"Zhen Dock","commodityName":"Xihe Biomorphic Companions","commodityLimit":"7t","systemLocation":"-10:-36:40","stationLocation":1941},
+			{"system":"Yaso Kondi","station":"Wheeler Market","commodityName":"Yaso Kondi Leaf","commodityLimit":"5t","systemLocation":"10:-176:0","stationLocation":112},
+			{"system":"Zaonce","station":"Ridley Scott","commodityName":"Leathery Eggs","commodityLimit":"1t","systemLocation":"90:48:70","stationLocation":390},
+			{"system":"Zeessze","station":"Nicollier Hanger","commodityName":"Zeessze Ant Grub Glue","commodityLimit":"18t","systemLocation":"-10:-4:-10","stationLocation":489}
+		];
+	</script>
+</body>
+</html>
