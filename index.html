@@ -39,9 +39,9 @@
 
 	<script type="text/javascript">
 	    $.ajax({
-	    	'url':'https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote',
-            'dataType': 'jsonp',
-            'success': function(data) {
+	    	url:'https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote',
+            	dataType: 'jsonp',
+            	success: function(data) {
 		        $('#quote').html(data);
 		    }
 	    });
