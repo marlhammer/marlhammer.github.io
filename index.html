@@ -6,8 +6,9 @@
 
 	<style>
 		.tool-header {
-			font-weight: bold;
+			margin-top: 10px;
 			margin-bottom: 10px;
+			font-weight: bold;
 		}
 
 		.tool {
@@ -15,6 +16,7 @@
 		}
 		
 		#quote {
+            margin-top: 10px;
 			margin-left: 5px;
 			font-style: italic;
 		}
@@ -32,10 +34,10 @@
 	<script type="text/javascript">
 	    $.ajax({
 	    	'url':'https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote',
-	    	  dataType: "jsonp",
-		  success: function(data){
-		      $('#id').html(data);
-		  }
+            'dataType': 'jsonp',
+            'success': function(data) {
+		        $('#quote').html(data);
+		    }
 	    });
 	</script>
 </body>
