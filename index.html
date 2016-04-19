@@ -13,6 +13,11 @@
 		.tool {
 			margin-left: 15px;
 		}
+		
+		#quote {
+			margin-left: 5px;
+			font-style: italic;
+		}
 	</style>
 </head>
 
@@ -22,7 +27,10 @@
 	<div class="tool-header">Elite Dangerous:</div>
 	<div class="tool"><a href="rare-commodity.html">Rare Commodity Tool</a></div>
 
+	<div>Quote of the Day: <span id="quote"></span></div>
+
 	<script type="text/javascript">
+	    $('#id').html($.get('https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote'));
 	</script>
 </body>
 </html>
