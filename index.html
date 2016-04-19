@@ -15,15 +15,10 @@
 			margin-left: 15px;
 		}
 		
-		#quote-block {
+		#quote-link {
             		margin-top: 10px;
     			margin-bottom: 10px;
 			font-weight: bold;
-		}
-		
-		#quote {
-			margin-left: 5px;
-			font-style: italic;
 		}
 	</style>
 </head>
@@ -34,17 +29,9 @@
 	<div class="tool-header">Elite Dangerous:</div>
 	<div class="tool"><a href="rare-commodity.html">Rare Commodity Tool</a></div>
 
-	<div id="quote-block">Quote of the Day: <span id="quote"></span></div>
-	
+	<div id="quote-link"><a href="https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote">Quote of the Day</a></div>
 
 	<script type="text/javascript">
-	    $.ajax({
-	    	url:'https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote',
-            	dataType: 'jsonp',
-            	success: function(data) {
-		        $('#quote').html(data);
-		    }
-	    });
 	</script>
 </body>
 </html>
