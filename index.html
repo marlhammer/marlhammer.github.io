@@ -30,7 +30,7 @@
 	<div>Quote of the Day: <span id="quote"></span></div>
 
 	<script type="text/javascript">
-	    $('#id').html($.get('https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote'));
+	    $('#id').html($.anjax('https://exztwhuso1.execute-api.us-west-2.amazonaws.com/test/quote', { 'jsonp':true}));
 	</script>
 </body>
 </html>
