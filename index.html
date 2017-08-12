@@ -1,36 +1,43 @@
 <html>
 <head>
-	<title>Marl The Hammer's Page</title>
+    <title>Marl The Hammer's Page</title>
 
-	<style>
-		.tool-header {
-			margin-top: 10px;
-			margin-bottom: 10px;
-			font-weight: bold;
-		}
-		.tool {
-			margin-left: 15px;
-		}
-		
-		#quote-link {
-            		margin-top: 30px;
-    			margin-bottom: 10px;
-			font-weight: bold;
-		}
-	</style>
+    <style>
+        .section-header {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .section {
+            margin-left: 15px;
+        }
+        
+        #quote {
+            font-style: italic;
+        }
+    </style>
 </head>
 
 <body>
-	<div><h1>Tools:</h1></div>
+    <div><h1>Tools:</h1></div>
 
-	<div class="tool-header">Elite Dangerous:</div>
-	<div class="tool"><a href="rare-commodity.html">Rare Commodity Tool</a></div>
+    <div class="section-header">Elite Dangerous:</div>
+    <div class="section"><a href="rare-commodity.html">Rare Commodity Tool</a></div>
 
-	<div id="quote-link"><a href="https://w9r2jl9grk.execute-api.us-east-1.amazonaws.com/quotes">Quote of the Day</a></div>
-	
-	<script src="jquery-2.2.0.js"></script>
-	
-	<script type="text/javascript">
-	</script>
+    <div class="section-header">Random Quote:</div>
+    <div class="section" id="quote"></div>
+    
+    <script src="jquery-2.2.0.js"></script>
+    
+    <script type="text/javascript">
+        $.ajax({
+            url: "https://w9r2jl9grk.execute-api.us-east-1.amazonaws.com/quotes",
+            method: 'GET',
+            success: function(data) {
+                $('#quote').html(data);
+            }
+        });
+    </script>
 </body>
 </html>
